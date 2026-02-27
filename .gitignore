@@ -1,0 +1,85 @@
+# Git Configuration
+
+## .gitignore
+
+```
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Backend
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/scan_results.db
+backend/scan_results.db-journal
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+frontend/.DS_Store
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+```
+
+## Initial Commit
+
+```bash
+git init
+git add .
+git commit -m "Initial commit: Email Threat Analyzer application"
+git remote add origin <your-repo-url>
+git push -u origin main
+```
+
+## Branch Strategy
+
+For development:
+```bash
+# Create feature branch
+git checkout -b feature/gmail-integration
+
+# Commit changes
+git add .
+git commit -m "Add Gmail integration feature"
+
+# Push to GitHub
+git push origin feature/gmail-integration
+
+# Create Pull Request on GitHub
+```
+
+## Deployment Branches
+
+- `main` - Production ready code
+- `develop` - Development branch
+- `feature/*` - Feature branches
+- `bugfix/*` - Bug fixes
+- `hotfix/*` - Production hotfixes
