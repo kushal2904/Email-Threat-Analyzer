@@ -57,8 +57,8 @@ uvicorn app.main:app --reload
 
 ### **Backend Environment Variables (.env)**
 ```
-✅ GOOGLE_CLIENT_ID=176425596987-ri9vlrg1f1j603dnunbqrhq4k5bv1p5i.apps.googleusercontent.com
-✅ GOOGLE_CLIENT_SECRET=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
+✅ GOOGLE_CLIENT_ID=YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
+✅ GOOGLE_CLIENT_SECRET=YOUR_CLIENT_SECRET_HERE
 ✅ GOOGLE_REDIRECT_URI=http://localhost:3000/oauth/callback
 ✅ Client Secrets File: backend/secrets/client_secret.json (EXISTS)
 ```

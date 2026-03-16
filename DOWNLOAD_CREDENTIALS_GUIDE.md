@@ -24,7 +24,7 @@ Look for your app in the **"OAuth 2.0 Client IDs"** section.
 
 **Your Client ID is:**
 ```
-176425596987-ri9vlrg1f1j603dnunbqrhq4k5bv1p5i.apps.googleusercontent.com
+ YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
 ```
 
 Click on it to open the details page.
@@ -80,8 +80,8 @@ The downloaded file should look like this:
 ```json
 {
   "web": {
-    "client_id": "176425596987-ri9vlrg1f1j603dnunbqrhq4k5bv1p5i.apps.googleusercontent.com",
-    "client_secret": "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",
+    "client_id": "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com",
+    "client_secret": "YOUR_CLIENT_SECRET_HERE",
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
     "token_uri": "https://oauth2.googleapis.com/token",
     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",

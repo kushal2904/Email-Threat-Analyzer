@@ -23,7 +23,7 @@ Go to: https://console.cloud.google.com/
 2. Click **"Credentials"**
 3. Under **"OAuth 2.0 Client IDs"**, find and click on:
    ```
-   176425596987-ri9vlrg1f1j603dnunbqrhq4k5bv1p5i.apps.googleusercontent.com
+   YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
    ```
 
 ### Step 3: Update Authorized redirect URIs
