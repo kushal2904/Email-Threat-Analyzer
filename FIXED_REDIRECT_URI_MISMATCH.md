@@ -68,8 +68,8 @@ A file named `client_id_*.json` will download.
    ```json
    {
      "web": {
-       "client_id": "176425596987-ri9vlrg1f1j603dnunbqrhq4k5bv1p5i.apps.googleusercontent.com",
-       "client_secret": "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",
+       "client_id": "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com",
+       "client_secret": "YOUR_CLIENT_SECRET_HERE",
        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
        "token_uri": "https://oauth2.googleapis.com/token",
        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
@@ -117,7 +117,7 @@ A file named `client_id_*.json` will download.
 
 **Solution**:
 - Verify `GOOGLE_CLIENT_ID` in `backend/.env` matches the one in Google Cloud Console
-- Current ID: `176425596987-ri9vlrg1f1j603dnunbqrhq4k5bv1p5i.apps.googleusercontent.com`
+- Current ID: `YOUR_CLIENT_ID_HERE.apps.googleusercontent.com`
 
 ### Issue: Changed Redirect URI but Still Getting Error
 
