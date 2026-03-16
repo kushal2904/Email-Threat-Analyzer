@@ -43,6 +43,7 @@ async def analyze_header(
             threat_score=threat_result["score"],
             risk_level=threat_result["risk_level"],
             explanation="; ".join(threat_result["explanations"]),
+            user_id=request.user_email,  # Store the user email
             created_at=datetime.utcnow()
         )
         
@@ -136,12 +137,19 @@ async def analyze_file(
 async def get_history(
     skip: int = 0,
     limit: int = 20,
+    user_email: str = None,
     db: Session = Depends(get_db)
 ):
-    """Get scan history"""
+    """Get scan history - filtered by user email if provided"""
     try:
-        total = db.query(ScanResult).count()
-        scans = db.query(ScanResult).order_by(ScanResult.created_at.desc()).offset(skip).limit(limit).all()
+        query = db.query(ScanResult)
+        
+        # Filter by user email if provided
+        if user_email:
+            query = query.filter(ScanResult.user_id == user_email)
+        
+        total = query.count()
+        scans = query.order_by(ScanResult.created_at.desc()).offset(skip).limit(limit).all()
         
         return {
             "total": total,

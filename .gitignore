@@ -18,6 +18,7 @@ backend/.coverage
 backend/htmlcov/
 backend/scan_results.db
 backend/scan_results.db-journal
+backend/secrets/
 
 # Frontend
 frontend/node_modules/

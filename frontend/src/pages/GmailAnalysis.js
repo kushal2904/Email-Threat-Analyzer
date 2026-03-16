@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiMail } from 'react-icons/fi';
 
@@ -11,17 +11,49 @@ const GmailAnalysis = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => {
+    // Check if Gmail is already connected
+    const storedToken = localStorage.getItem('gmail_access_token');
+    const isConnected = localStorage.getItem('gmail_connected') === 'true';
+    
+    if (storedToken && isConnected) {
+      setAccessToken(storedToken);
+      setGmailConnected(true);
+    }
+
+    // Listen for OAuth callback messages
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GMAIL_CONNECTED') {
+        setAccessToken(event.data.access_token);
+        setGmailConnected(true);
+        setError(null);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const handleGmailConnect = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/gmail/auth-url`);
       window.open(response.data.auth_url, 'Gmail OAuth', 'width=500,height=600');
-      // In a real app, you would use a callback to get the token
     } catch (err) {
-      setError('Failed to connect Gmail');
+      setError(err.response?.data?.detail || 'Failed to connect Gmail');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDisconnect = () => {
+    localStorage.removeItem('gmail_access_token');
+    localStorage.removeItem('gmail_connected');
+    setAccessToken(null);
+    setGmailConnected(false);
+    setEmails([]);
   };
 
   const handleFetchEmails = async () => {
@@ -38,7 +70,7 @@ const GmailAnalysis = () => {
       setEmails(response.data.emails);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch emails');
+      setError(err.response?.data?.detail || 'Failed to fetch emails');
     } finally {
       setLoading(false);
     }
@@ -67,8 +99,16 @@ const GmailAnalysis = () => {
                 {loading ? 'Connecting...' : 'Connect Gmail'}
               </button>
             ) : (
-              <div className="connected-badge">
-                <span>✓ Gmail Connected</span>
+              <div>
+                <div className="connected-badge">
+                  <span>✓ Gmail Connected</span>
+                </div>
+                <button
+                  className="btn btn-secondary mt-2"
+                  onClick={handleDisconnect}
+                >
+                  Disconnect
+                </button>
               </div>
             )}
           </div>

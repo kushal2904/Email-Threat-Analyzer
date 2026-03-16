@@ -1,17 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.models.database import ScanResult, get_db
 
 router = APIRouter(prefix="/api", tags=["history"])
 
 
+class DeleteByDateRequest(BaseModel):
+    days_old: int
+
+
 @router.delete("/delete/{scan_id}")
-async def delete_scan(scan_id: str, db: Session = Depends(get_db)):
-    """Delete a specific scan"""
+async def delete_scan(scan_id: str, user_email: str = Query(None), db: Session = Depends(get_db)):
+    """Delete a specific scan - optionally verify user ownership"""
     try:
         scan = db.query(ScanResult).filter(ScanResult.id == scan_id).first()
         if not scan:
             raise HTTPException(status_code=404, detail="Scan not found")
+        
+        # If user_email is provided, verify ownership
+        if user_email and scan.user_id != user_email:
+            raise HTTPException(status_code=403, detail="Unauthorized: You can only delete your own scans")
         
         db.delete(scan)
         db.commit()
@@ -36,14 +45,14 @@ async def delete_all_scans(db: Session = Depends(get_db)):
 
 @router.post("/delete-by-date")
 async def delete_scans_by_date(
-    days_old: int,
+    request: DeleteByDateRequest,
     db: Session = Depends(get_db)
 ):
     """Delete scans older than specified days"""
     from datetime import datetime, timedelta
     
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+        cutoff_date = datetime.utcnow() - timedelta(days=request.days_old)
         scans = db.query(ScanResult).filter(ScanResult.created_at < cutoff_date).all()
         count = len(scans)
         
@@ -53,7 +62,7 @@ async def delete_scans_by_date(
         db.commit()
         
         return {
-            "message": f"Deleted scans older than {days_old} days",
+            "message": f"Deleted scans older than {request.days_old} days",
             "deleted_count": count
         }
     except Exception as e:

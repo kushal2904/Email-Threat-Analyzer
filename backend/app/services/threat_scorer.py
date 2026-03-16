@@ -8,58 +8,113 @@ class ThreatScorer:
     
     @staticmethod
     def calculate_score(header_data: Dict, file_data: Optional[Dict] = None) -> Dict:
-        """Calculate overall threat score"""
+        """Calculate overall threat score with weighted factors"""
         score = 0.0
         max_score = 100.0
         explanations = []
+        weighted_factors = {}
         
-        # SPF check (25 points max)
+        # SPF check (25 points max) - Critical for authentication
         spf_result = header_data.get("spf", {}).get("result", "fail")
+        spf_score = 0
         if spf_result == "fail":
-            score += 25
-            explanations.append("SPF check failed")
-        elif spf_result == "pass":
-            # SPF passed, no points
+            spf_score = 25
+            explanations.append("SPF check failed - email not authorized")
+        elif spf_result == "softfail":
+            spf_score = 12
+            explanations.append("SPF softfail - authorization questionable")
+        elif spf_result == "neutral":
+            spf_score = 8
+            explanations.append("SPF neutral - no policy statement")
+        elif spf_result == "not_tested":
+            spf_score = 0
+            # Don't add explanation if not tested
             pass
+        weighted_factors["spf"] = spf_score
+        score += spf_score
         
-        # DMARC check (25 points max)
+        # DMARC check (25 points max) - Very important for domain authentication
         dmarc_result = header_data.get("dmarc", {}).get("result", "fail")
+        dmarc_score = 0
         if dmarc_result == "fail":
-            score += 25
-            explanations.append("DMARC record missing or failed")
+            dmarc_score = 25
+            explanations.append("DMARC check failed - domain not verified")
+        elif dmarc_result == "softfail":
+            dmarc_score = 15
+            explanations.append("DMARC softfail - partial policy alignment")
+        elif dmarc_result == "neutral":
+            dmarc_score = 8
+            explanations.append("DMARC neutral - no policy")
+        elif dmarc_result == "not_tested":
+            dmarc_score = 0
+            # Don't add explanation if not tested
+            pass
+        weighted_factors["dmarc"] = dmarc_score
+        score += dmarc_score
         
-        # DKIM check (20 points max)
+        # DKIM check (20 points max) - Signature verification
         dkim_result = header_data.get("dkim", {}).get("result", "fail")
+        dkim_score = 0
         if dkim_result == "fail":
-            score += 20
-            explanations.append("DKIM signature missing")
+            dkim_score = 20
+            explanations.append("DKIM signature missing or invalid")
+        elif dkim_result == "neutral":
+            dkim_score = 5
+            explanations.append("DKIM signature not present (unsigned)")
+        elif dkim_result == "not_tested":
+            dkim_score = 0
+            # Don't add explanation if not tested
+            pass
+        weighted_factors["dkim"] = dkim_score
+        score += dkim_score
         
-        # Domain age check (15 points max)
+        # Domain age check (10 points max) - New domains are riskier
         domain_age = header_data.get("domain_age_days")
-        if domain_age and domain_age < 30:
-            score += min(15, domain_age)  # More recent = higher score
-            explanations.append(f"Domain is new ({domain_age} days)")
+        domain_age_score = 0
+        if domain_age:
+            if domain_age < 7:
+                domain_age_score = 10
+                explanations.append(f"Domain very new ({domain_age} days old)")
+            elif domain_age < 30:
+                domain_age_score = 7
+                explanations.append(f"Domain is new ({domain_age} days old)")
+            elif domain_age < 90:
+                domain_age_score = 2
+        weighted_factors["domain_age"] = domain_age_score
+        score += domain_age_score
         
-        # IP location check (15 points max)
+        # IP location check (10 points max) - Geographic risk assessment
         ip_info = header_data.get("ip_info", {})
+        ip_score = 0
         if ip_info.get("status") == "found":
             country = ip_info.get("country")
-            if country in ["CN", "RU", "IR", "KP", "SY", "CU"]:
-                score += 15
+            high_risk_countries = ["CN", "RU", "IR", "KP", "SY", "CU"]
+            medium_risk_countries = ["VN", "TH", "NG"]
+            
+            if country in high_risk_countries:
+                ip_score = 10
                 explanations.append(f"Email from high-risk country: {country}")
+            elif country in medium_risk_countries:
+                ip_score = 5
+                explanations.append(f"Email from medium-risk country: {country}")
+        weighted_factors["ip_location"] = ip_score
+        score += ip_score
         
-        # File malware check (25 points max)
+        # File malware check (10 points max) - Attachment threats
+        file_score = 0
         if file_data:
             malware_status = file_data.get("malware_status", "Unknown")
             vt_data = file_data.get("virustotal", {})
             
             if malware_status == "Malicious":
-                score = min(score + 25, max_score)
-                explanations.append("File flagged as malicious by VirusTotal")
+                file_score = 10
+                explanations.append("Attachment flagged as malicious by VirusTotal")
             elif malware_status == "Suspicious":
                 suspicious_count = vt_data.get("suspicious_count", 0)
-                score = min(score + 15, max_score)
-                explanations.append(f"File flagged as suspicious ({suspicious_count} engines)")
+                file_score = min(7, suspicious_count // 2)
+                explanations.append(f"Attachment flagged as suspicious ({suspicious_count} engines)")
+        weighted_factors["malware"] = file_score
+        score = min(score + file_score, max_score)
         
         # Normalize score to 0-100
         normalized_score = min(score, max_score)
@@ -70,6 +125,7 @@ class ThreatScorer:
             "risk_level": risk_level,
             "max_score": max_score,
             "explanations": explanations,
+            "weighted_breakdown": weighted_factors,
             "breakdown": {
                 "spf": spf_result,
                 "dmarc": dmarc_result,

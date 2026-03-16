@@ -1,46 +1,105 @@
 import aiohttp
 import json
+import os
+import logging
 from typing import Dict, Optional, List
-from google.auth.oauthlib.flow import Flow
+from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class GmailService:
     """Handle Gmail integration"""
     
     SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+    SECRETS_FILE = os.path.join(os.path.dirname(__file__), '../../secrets/client_secret.json')
+    
+    @staticmethod
+    def _get_secrets_path():
+        """Get the correct path to client_secret.json"""
+        # Try multiple possible locations
+        possible_paths = [
+            # From backend directory
+            'secrets/client_secret.json',
+            # From app/services directory (../.. up to backend, then down to secrets)
+            os.path.join(os.path.dirname(__file__), '../../secrets/client_secret.json'),
+            # From current working directory
+            os.path.join(os.getcwd(), 'secrets/client_secret.json'),
+            # From parent of cwd (in case running from root)
+            os.path.join(os.path.dirname(os.getcwd()), 'backend', 'secrets', 'client_secret.json'),
+        ]
+        
+        for path in possible_paths:
+            abs_path = os.path.abspath(path)
+            if os.path.exists(abs_path):
+                return abs_path
+        
+        # If not found, raise clear error
+        raise FileNotFoundError(
+            f"Client secrets file not found in any of these locations:\n" +
+            "\n".join([f"  - {os.path.abspath(p)}" for p in possible_paths])
+        )
     
     @staticmethod
     def get_auth_flow():
         """Get OAuth flow for Gmail authentication"""
-        flow = Flow.from_client_secrets_file(
-            'secrets/client_secret.json',
-            scopes=GmailService.SCOPES,
-            redirect_uri=Config.GOOGLE_REDIRECT_URI
-        )
-        return flow
+        try:
+            secrets_path = GmailService._get_secrets_path()
+            logger.info(f"Using secrets file: {secrets_path}")
+            
+            if not os.path.exists(secrets_path):
+                raise FileNotFoundError(f"Client secrets file not found at {secrets_path}")
+            
+            logger.info(f"Google Redirect URI: {Config.GOOGLE_REDIRECT_URI}")
+            logger.info(f"Google Client ID: {Config.GOOGLE_CLIENT_ID[:20]}...")
+            
+            # Validate that we have necessary config
+            if not Config.GOOGLE_CLIENT_ID or not Config.GOOGLE_CLIENT_SECRET:
+                raise ValueError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in config")
+            
+            flow = Flow.from_client_secrets_file(
+                secrets_path,
+                scopes=GmailService.SCOPES,
+                redirect_uri=Config.GOOGLE_REDIRECT_URI
+            )
+            logger.info("Successfully created OAuth flow")
+            return flow
+        except Exception as e:
+            logger.error(f"Failed to create OAuth flow: {e}", exc_info=True)
+            raise
     
     @staticmethod
     def get_authorization_url():
         """Get authorization URL"""
-        flow = GmailService.get_auth_flow()
-        auth_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true'
-        )
-        return auth_url, state
+        try:
+            flow = GmailService.get_auth_flow()
+            auth_url, state = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true'
+            )
+            logger.info(f"Generated auth URL, state: {state[:20]}...")
+            return auth_url, state
+        except Exception as e:
+            logger.error(f"Failed to get authorization URL: {e}", exc_info=True)
+            raise
     
     @staticmethod
     def exchange_code_for_token(auth_code: str) -> Dict:
         """Exchange authorization code for access token"""
         try:
+            logger.info("=== Exchanging auth code for token ===")
             flow = GmailService.get_auth_flow()
+            logger.info(f"Flow created, redirect_uri: {flow.redirect_uri}")
+            
+            logger.info(f"Fetching token with code: {auth_code[:20]}...")
             flow.fetch_token(code=auth_code)
             
             credentials = flow.credentials
+            logger.info(f"Token fetched successfully")
             
             return {
                 "access_token": credentials.token,
@@ -49,6 +108,7 @@ class GmailService:
                 "status": "success"
             }
         except Exception as e:
+            logger.error(f"Token exchange failed: {type(e).__name__}: {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
     
     @staticmethod

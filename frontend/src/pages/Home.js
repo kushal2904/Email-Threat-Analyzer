@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { FiUpload } from 'react-icons/fi';
+import { FiUpload, FiInfo } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import RiskMeter from '../components/RiskMeter';
 import HeaderAnalysisResult from '../components/HeaderAnalysisResult';
 import FileAnalysisResult from '../components/FileAnalysisResult';
@@ -8,6 +9,7 @@ import FileAnalysisResult from '../components/FileAnalysisResult';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const Home = () => {
+  const { user } = useAuth();
   const [analysisMode, setAnalysisMode] = useState('combined'); // 'combined' or 'attachment'
   const [rawHeader, setRawHeader] = useState('');
   const [file, setFile] = useState(null);
@@ -15,6 +17,7 @@ const Home = () => {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [scanId, setScanId] = useState(null);
+  const [showHeaderHelp, setShowHeaderHelp] = useState(false);
 
   const handleHeaderAnalysis = async (e) => {
     e.preventDefault();
@@ -24,7 +27,8 @@ const Home = () => {
     try {
       const response = await axios.post(`${API_URL}/analyze-header`, {
         raw_header: rawHeader,
-        subject: 'Email Subject'
+        subject: 'Email Subject',
+        user_email: user?.email || null
       });
 
       setScanId(response.data.scan_id);
@@ -141,7 +145,66 @@ const Home = () => {
                 <h3>Step 1: Paste Email Header</h3>
                 <form onSubmit={handleHeaderAnalysis}>
                   <div className="form-group">
-                    <label htmlFor="header">Raw Email Header</label>
+                    <div className="label-with-help">
+                      <label htmlFor="header">Raw Email Header</label>
+                      <button 
+                        type="button"
+                        className="help-icon-btn"
+                        onClick={() => setShowHeaderHelp(!showHeaderHelp)}
+                        title="How to find and copy email headers"
+                      >
+                        <FiInfo />
+                      </button>
+                    </div>
+                    {showHeaderHelp && (
+                      <div className="help-modal">
+                        <div className="help-content">
+                          <h4>How to Find & Copy Email Headers</h4>
+                          
+                          <div className="help-section">
+                            <h5>📧 Gmail</h5>
+                            <ol>
+                              <li>Open the email you want to analyze</li>
+                              <li>Click the three dots (...) menu at the top</li>
+                              <li>Select "Show original" or "View message source"</li>
+                              <li>Select all text (Ctrl+A) and copy (Ctrl+C)</li>
+                            </ol>
+                          </div>
+
+                          <div className="help-section">
+                            <h5>📬 Outlook / Microsoft 365</h5>
+                            <ol>
+                              <li>Open the email</li>
+                              <li>Click "File" → "Info" → "Properties"</li>
+                              <li>Or click the three dots (...) and select "View message details"</li>
+                              <li>Copy all the header information</li>
+                            </ol>
+                          </div>
+
+                          <div className="help-section">
+                            <h5>🐦 Apple Mail</h5>
+                            <ol>
+                              <li>Open the email</li>
+                              <li>Go to View → Message → Long Headers</li>
+                              <li>Copy all the header content</li>
+                            </ol>
+                          </div>
+
+                          <div className="help-section">
+                            <h5>📨 Thunderbird</h5>
+                            <ol>
+                              <li>Right-click on the email message</li>
+                              <li>Select "View Message Source" or use Ctrl+U</li>
+                              <li>Copy the entire header section (all lines starting with To:, From:, Date:, etc.)</li>
+                            </ol>
+                          </div>
+
+                          <div className="help-tip">
+                            <strong>💡 Tip:</strong> Headers typically include From, To, Date, Subject, and Received fields. Make sure to copy the complete headers including all "Received:" lines for accurate analysis.
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <textarea
                       id="header"
                       value={rawHeader}
@@ -255,6 +318,8 @@ const Home = () => {
           margin-bottom: 0.5rem;
           color: var(--accent-blue);
           text-align: center;
+          font-weight: 700;
+          letter-spacing: -0.5px;
         }
 
         .subtitle {
@@ -262,6 +327,7 @@ const Home = () => {
           margin-bottom: 2rem;
           font-size: 1.125rem;
           text-align: center;
+          font-weight: 500;
         }
 
         .analysis-container {
@@ -285,6 +351,37 @@ const Home = () => {
           border-top: 1px solid var(--border-color);
         }
 
+        .mode-selector {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+          margin-bottom: 2rem;
+          flex-wrap: wrap;
+        }
+
+        .mode-btn {
+          padding: 0.8rem 1.5rem;
+          border: 2px solid var(--border-color);
+          background-color: var(--card-bg);
+          color: var(--text-primary);
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          font-size: 1rem;
+        }
+
+        .mode-btn:hover {
+          border-color: var(--accent-blue);
+          background-color: rgba(0, 82, 204, 0.05);
+        }
+
+        .mode-btn.active {
+          background-color: var(--accent-blue);
+          color: white;
+          border-color: var(--accent-blue);
+        }
+
         .form-columns {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -300,9 +397,21 @@ const Home = () => {
           min-height: 500px;
         }
 
+        [data-theme="light"] .form-columns .card {
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05), 0 4px 24px rgba(0, 0, 0, 0.04);
+          border: 1px solid #e8ecf1;
+        }
+
+        [data-theme="light"] .form-columns .card:hover {
+          box-shadow: 0 4px 16px rgba(0, 82, 204, 0.1), 0 8px 32px rgba(0, 0, 0, 0.06);
+          border-color: #d0d8e0;
+        }
+
         .form-columns .card h3 {
           margin-bottom: 1.5rem;
           font-size: 1.25rem;
+          color: var(--text-primary);
+          font-weight: 600;
         }
 
         .form-columns form {
@@ -322,21 +431,147 @@ const Home = () => {
         .form-columns textarea {
           flex: 1;
           min-height: 200px;
+          padding: 1rem;
+          border: 1px solid var(--border-color);
+          border-radius: 6px;
+          background-color: var(--card-bg);
+          color: var(--text-primary);
+          font-family: 'Courier New', monospace;
+          font-size: 0.875rem;
+          resize: vertical;
+          transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .form-columns textarea {
+          background-color: #fafbfc;
+        }
+
+        .form-columns textarea:focus {
+          outline: none;
+          border-color: var(--accent-blue);
+          box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
         }
 
         .warning-box {
-          background-color: rgba(245, 158, 11, 0.1);
-          border: 1px solid var(--accent-yellow);
+          background: linear-gradient(135deg, rgba(0, 82, 204, 0.08) 0%, rgba(0, 82, 204, 0.04) 100%);
+          border: 1px solid var(--accent-blue);
+          border-left: 3px solid var(--accent-blue);
           border-radius: 6px;
           padding: 1rem;
           margin-bottom: 1.5rem;
         }
 
+        [data-theme="light"] .warning-box {
+          background: linear-gradient(135deg, #e8f0ff 0%, #f0f4ff 100%);
+          border: 1px solid #c7d9f7;
+          border-left: 3px solid #0052cc;
+        }
+
         .warning-text {
-          color: var(--accent-yellow);
+          color: var(--accent-blue);
           font-size: 0.9rem;
           line-height: 1.5;
           margin: 0;
+          font-weight: 500;
+        }
+
+        [data-theme="light"] .warning-text {
+          color: #003d99;
+        }
+
+        label {
+          color: var(--text-primary);
+          font-weight: 600;
+          font-size: 0.95rem;
+        }
+
+        .label-with-help {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.5rem;
+        }
+
+        .help-icon-btn {
+          background: none;
+          border: none;
+          color: var(--accent-blue);
+          cursor: pointer;
+          font-size: 1.2rem;
+          padding: 0.25rem 0.5rem;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+        }
+
+        .help-icon-btn:hover {
+          background-color: rgba(0, 82, 204, 0.1);
+          transform: scale(1.15);
+        }
+
+        .help-modal {
+          background-color: rgba(0, 82, 204, 0.05);
+          border: 1px solid var(--accent-blue);
+          border-radius: 6px;
+          padding: 1.5rem;
+          margin-bottom: 1rem;
+          max-height: 500px;
+          overflow-y: auto;
+        }
+
+        [data-theme="light"] .help-modal {
+          background-color: #f0f4ff;
+          border: 1px solid #c7d9f7;
+        }
+
+        .help-content h4 {
+          color: var(--accent-blue);
+          margin-bottom: 1rem;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        [data-theme="light"] .help-content h4 {
+          color: #0052cc;
+        }
+
+        .help-section {
+          margin-bottom: 1.2rem;
+        }
+
+        .help-section h5 {
+          color: var(--text-primary);
+          font-size: 0.95rem;
+          margin-bottom: 0.5rem;
+          font-weight: 600;
+        }
+
+        .help-section ol {
+          padding-left: 1.5rem;
+          color: var(--text-secondary);
+          font-size: 0.85rem;
+          line-height: 1.6;
+        }
+
+        .help-section li {
+          margin-bottom: 0.4rem;
+        }
+
+        .help-tip {
+          background-color: rgba(16, 185, 129, 0.1);
+          border-left: 3px solid var(--accent-green);
+          padding: 0.75rem;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          color: var(--text-primary);
+          line-height: 1.5;
+        }
+
+        [data-theme="light"] .help-tip {
+          background-color: #ecfdf5;
+          border-left-color: #10b981;
         }
 
         .input-section > .card {
@@ -375,24 +610,37 @@ const Home = () => {
           width: 100%;
           padding: 3rem 2rem;
           border: 2px dashed var(--border-color);
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
-          background-color: rgba(255, 255, 255, 0.02);
+          background-color: rgba(0, 82, 204, 0.02);
           transition: all 0.3s ease;
           font-weight: 600;
           min-height: 180px;
           flex-direction: column;
+          color: var(--accent-blue);
+        }
+
+        [data-theme="light"] .file-input-label {
+          background-color: #fafbfc;
+          border-color: #d0d8e0;
+          color: #0052cc;
         }
 
         .file-input-label:hover {
           border-color: var(--accent-blue);
-          background-color: rgba(59, 130, 246, 0.1);
+          background-color: rgba(0, 82, 204, 0.08);
+        }
+
+        [data-theme="light"] .file-input-label:hover {
+          background-color: #e8f0ff;
+          border-color: #0052cc;
         }
 
         .form-columns .btn {
           margin-top: auto;
           padding: 0.875rem 1.5rem;
           font-size: 1rem;
+          font-weight: 600;
         }
 
         input[type="file"] {
@@ -403,6 +651,7 @@ const Home = () => {
           margin-top: 0.5rem;
           color: var(--accent-green);
           font-size: 0.875rem;
+          font-weight: 500;
         }
 
         .explanation-list {
@@ -411,11 +660,36 @@ const Home = () => {
         }
 
         .explanation-list li {
-          padding: 0.75rem;
+          padding: 0.75rem 1rem;
           margin-bottom: 0.5rem;
-          background-color: rgba(59, 130, 246, 0.1);
+          background-color: rgba(0, 82, 204, 0.06);
           border-left: 3px solid var(--accent-blue);
           border-radius: 0 4px 4px 0;
+          color: var(--text-primary);
+        }
+
+        [data-theme="light"] .explanation-list li {
+          background-color: #f0f4ff;
+          border-left-color: #0052cc;
+        }
+
+        .help-text {
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+          font-style: italic;
+          margin-top: 0.5rem;
+        }
+
+        .mt-3 {
+          margin-top: 1.5rem;
+        }
+
+        .mt-2 {
+          margin-top: 1rem;
+        }
+
+        .mb-2 {
+          margin-bottom: 1rem;
         }
 
         @media (max-width: 1024px) {
@@ -426,12 +700,29 @@ const Home = () => {
         }
 
         @media (max-width: 768px) {
+          .home h1 {
+            font-size: 1.75rem;
+          }
+
+          .subtitle {
+            font-size: 1rem;
+          }
+
           .form-columns {
             gap: 1.5rem;
           }
 
           .form-columns .card {
             min-height: auto;
+          }
+
+          .mode-selector {
+            gap: 0.75rem;
+          }
+
+          .mode-btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
           }
         }
       `}</style>

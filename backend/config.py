@@ -25,5 +25,12 @@ class Config:
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
     
-    # CORS
-    ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:8000"]
+    # CORS - Allow both ports in case of port binding issues
+    ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
+    ]

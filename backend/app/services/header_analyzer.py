@@ -25,10 +25,19 @@ class HeaderAnalyzer:
             # Extract originating IP
             originating_ip = HeaderAnalyzer._extract_originating_ip(msg)
             
-            # Check DNS records
-            spf_result = await DNSChecker.check_spf(sender_domain) if sender_domain else {"result": "fail"}
-            dmarc_result = await DNSChecker.check_dmarc(sender_domain) if sender_domain else {"result": "fail"}
-            dkim_result = await DNSChecker.check_dkim(sender_domain) if sender_domain else {"result": "fail"}
+            # First check if Authentication-Results header exists (takes precedence)
+            auth_results = msg.get('Authentication-Results', '')
+            
+            if auth_results:
+                # Parse authentication results from the header
+                spf_result = HeaderAnalyzer._parse_auth_result(auth_results, 'spf')
+                dmarc_result = HeaderAnalyzer._parse_auth_result(auth_results, 'dmarc')
+                dkim_result = HeaderAnalyzer._parse_auth_result(auth_results, 'dkim')
+            else:
+                # Fall back to DNS checks if no Authentication-Results header
+                spf_result = await DNSChecker.check_spf(sender_domain) if sender_domain else {"result": "fail"}
+                dmarc_result = await DNSChecker.check_dmarc(sender_domain) if sender_domain else {"result": "fail"}
+                dkim_result = await DNSChecker.check_dkim(sender_domain) if sender_domain else {"result": "fail"}
             
             # Get WHOIS information
             whois_info = await WHOISChecker.get_domain_info(sender_domain) if sender_domain else {}
@@ -91,6 +100,36 @@ class HeaderAnalyzer:
             return None
         except:
             return None
+    
+    @staticmethod
+    def _parse_auth_result(auth_results: str, result_type: str) -> Dict:
+        """Parse authentication results from Authentication-Results header"""
+        try:
+            # Convert to lowercase for case-insensitive matching
+            auth_results_lower = auth_results.lower()
+            
+            # Look for the specific result type (e.g., 'spf=pass')
+            pattern = rf'{result_type}=(\w+)'
+            match = re.search(pattern, auth_results_lower)
+            
+            if match:
+                result_value = match.group(1)
+                # Normalize result values
+                if result_value in ['pass', '+']:
+                    return {"result": "pass"}
+                elif result_value in ['fail', '-']:
+                    return {"result": "fail"}
+                elif result_value in ['softfail', '~']:
+                    return {"result": "softfail"}
+                elif result_value in ['neutral', '?']:
+                    return {"result": "neutral"}
+                else:
+                    return {"result": result_value}
+            
+            # If not found in Authentication-Results, return None to indicate not tested
+            return {"result": "not_tested"}
+        except:
+            return {"result": "not_tested"}
     
     @staticmethod
     def verify_headers_authenticity(header_data: Dict) -> Dict:

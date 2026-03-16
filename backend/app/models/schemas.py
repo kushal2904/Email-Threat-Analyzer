@@ -6,6 +6,7 @@ from datetime import datetime
 class EmailHeaderRequest(BaseModel):
     raw_header: str
     subject: Optional[str] = None
+    user_email: Optional[str] = None  # Email of the user performing the analysis
 
 
 class FileAnalysisRequest(BaseModel):
